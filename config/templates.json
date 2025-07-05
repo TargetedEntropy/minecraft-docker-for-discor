@@ -1,0 +1,87 @@
+{
+  "vanilla": {
+    "name": "Vanilla Minecraft",
+    "description": "Standard Minecraft server without mods",
+    "image": "itzg/minecraft-server:latest",
+    "environment": {
+      "EULA": "TRUE",
+      "TYPE": "VANILLA",
+      "MEMORY": "2G",
+      "DIFFICULTY": "normal",
+      "MAX_PLAYERS": "20",
+      "MOTD": "A Vanilla Minecraft Server",
+      "SPAWN_PROTECTION": "16"
+    },
+    "ports": {
+      "25565/tcp": null
+    },
+    "volumes": {},
+    "restart_policy": {
+      "Name": "unless-stopped"
+    }
+  },
+  "forge": {
+    "name": "Forge Minecraft",
+    "description": "Minecraft server with Forge mod loader",
+    "image": "itzg/minecraft-server:latest",
+    "environment": {
+      "EULA": "TRUE",
+      "TYPE": "FORGE",
+      "VERSION": "1.20.1",
+      "FORGE_VERSION": "47.2.0",
+      "MEMORY": "4G",
+      "DIFFICULTY": "normal",
+      "MAX_PLAYERS": "20",
+      "MOTD": "A Forge Minecraft Server"
+    },
+    "ports": {
+      "25565/tcp": null
+    },
+    "volumes": {},
+    "restart_policy": {
+      "Name": "unless-stopped"
+    }
+  },
+  "modded": {
+    "name": "Modded Minecraft",
+    "description": "Minecraft server with custom modpack support",
+    "image": "itzg/minecraft-server:latest",
+    "environment": {
+      "EULA": "TRUE",
+      "TYPE": "FORGE",
+      "MEMORY": "6G",
+      "DIFFICULTY": "normal",
+      "MAX_PLAYERS": "20",
+      "MOTD": "A Modded Minecraft Server",
+      "MODPACK": ""
+    },
+    "ports": {
+      "25565/tcp": null
+    },
+    "volumes": {},
+    "restart_policy": {
+      "Name": "unless-stopped"
+    }
+  },
+  "fabric": {
+    "name": "Fabric Minecraft",
+    "description": "Minecraft server with Fabric mod loader",
+    "image": "itzg/minecraft-server:latest",
+    "environment": {
+      "EULA": "TRUE",
+      "TYPE": "FABRIC",
+      "VERSION": "1.20.1",
+      "MEMORY": "3G",
+      "DIFFICULTY": "normal",
+      "MAX_PLAYERS": "20",
+      "MOTD": "A Fabric Minecraft Server"
+    },
+    "ports": {
+      "25565/tcp": null
+    },
+    "volumes": {},
+    "restart_policy": {
+      "Name": "unless-stopped"
+    }
+  }
+}

@@ -1,120 +1,104 @@
+"""
+Minecraft server management cog
+"""
+
 import discord
 from discord.ext import commands
 import docker
 import json
-import os
 import asyncio
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 import logging
-from dotenv import load_dotenv
+from pathlib import Path
 
-# Load environment variables from .env file
-load_dotenv()
+from src.utils.docker_helper import DockerHelper
+from src.utils.permissions import PermissionChecker
+from src.utils.validators import ServerValidator
+from src.models.server import MinecraftServer
+from src.models.template import ServerTemplate
+from config.settings import settings
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Bot configuration
-DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
-ALLOWED_ROLES = os.getenv('ALLOWED_ROLES', 'Admin,Moderator,ServerManager').split(',')  # Configure these role names
-TEMPLATES_FILE = 'server_templates.json'
-SERVERS_FILE = 'active_servers.json'
 
 class MinecraftServerManager(commands.Cog):
+    """Cog for managing Minecraft servers"""
+    
     def __init__(self, bot):
         self.bot = bot
-        self.docker_client = docker.from_env()
+        self.docker_helper = DockerHelper()
+        self.permission_checker = PermissionChecker()
+        self.validator = ServerValidator()
         self.templates = self.load_templates()
         self.active_servers = self.load_active_servers()
         
     def load_templates(self) -> Dict:
         """Load server templates from JSON file"""
         try:
-            with open(TEMPLATES_FILE, 'r') as f:
+            with open(settings.TEMPLATES_FILE, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
-            # Create default templates if file doesn't exist
-            default_templates = {
-                "vanilla": {
-                    "image": "itzg/minecraft-server:latest",
-                    "environment": {
-                        "EULA": "TRUE",
-                        "TYPE": "VANILLA",
-                        "MEMORY": "2G"
-                    },
-                    "ports": {"25565/tcp": None},
-                    "volumes": {}
-                },
-                "forge": {
-                    "image": "itzg/minecraft-server:latest",
-                    "environment": {
-                        "EULA": "TRUE",
-                        "TYPE": "FORGE",
-                        "MEMORY": "4G"
-                    },
-                    "ports": {"25565/tcp": None},
-                    "volumes": {}
-                },
-                "modded": {
-                    "image": "itzg/minecraft-server:latest",
-                    "environment": {
-                        "EULA": "TRUE",
-                        "TYPE": "FORGE",
-                        "MEMORY": "6G",
-                        "MODPACK": ""
-                    },
-                    "ports": {"25565/tcp": None},
-                    "volumes": {}
-                }
-            }
-            self.save_templates(default_templates)
-            return default_templates
-    
-    def save_templates(self, templates: Dict):
-        """Save templates to JSON file"""
-        with open(TEMPLATES_FILE, 'w') as f:
-            json.dump(templates, f, indent=2)
+            logger.error(f"Templates file not found: {settings.TEMPLATES_FILE}")
+            return {}
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing templates file: {e}")
+            return {}
     
     def load_active_servers(self) -> Dict:
         """Load active servers from JSON file"""
         try:
-            with open(SERVERS_FILE, 'r') as f:
+            with open(settings.SERVERS_FILE, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
+            return {}
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing servers file: {e}")
             return {}
     
     def save_active_servers(self):
         """Save active servers to JSON file"""
-        with open(SERVERS_FILE, 'w') as f:
-            json.dump(self.active_servers, f, indent=2)
-    
-    def has_required_role(self, member: discord.Member) -> bool:
-        """Check if member has required role"""
-        user_roles = [role.name for role in member.roles]
-        return any(role in ALLOWED_ROLES for role in user_roles)
+        try:
+            Path(settings.SERVERS_FILE).parent.mkdir(parents=True, exist_ok=True)
+            with open(settings.SERVERS_FILE, 'w') as f:
+                json.dump(self.active_servers, f, indent=2)
+        except Exception as e:
+            logger.error(f"Error saving servers file: {e}")
     
     @commands.command(name='list_templates')
     async def list_templates(self, ctx):
         """List available server templates"""
-        if not self.has_required_role(ctx.author):
+        if not self.permission_checker.has_required_role(ctx.author):
             await ctx.send("❌ You don't have permission to use this command.")
             return
         
+        if not self.templates:
+            await ctx.send("❌ No templates available.")
+            return
+        
         embed = discord.Embed(title="Available Server Templates", color=0x00ff00)
+        
         for name, template in self.templates.items():
+            template_obj = ServerTemplate.from_dict(name, template)
             embed.add_field(
-                name=name.capitalize(),
-                value=f"Image: {template['image']}\nMemory: {template['environment'].get('MEMORY', 'N/A')}",
+                name=template_obj.name,
+                value=f"**Type:** {template_obj.environment.get('TYPE', 'Unknown')}\n"
+                      f"**Memory:** {template_obj.environment.get('MEMORY', 'N/A')}\n"
+                      f"**Description:** {template_obj.description}",
                 inline=False
             )
+        
         await ctx.send(embed=embed)
     
     @commands.command(name='create_server')
     async def create_server(self, ctx, server_name: str, template_name: str, port: int = None):
         """Create a new Minecraft server from template"""
-        if not self.has_required_role(ctx.author):
+        if not self.permission_checker.has_required_role(ctx.author):
             await ctx.send("❌ You don't have permission to use this command.")
+            return
+        
+        # Validate inputs
+        if not self.validator.validate_server_name(server_name):
+            await ctx.send("❌ Invalid server name. Use only letters, numbers, and underscores.")
             return
         
         if template_name not in self.templates:
@@ -125,36 +109,27 @@ class MinecraftServerManager(commands.Cog):
             await ctx.send(f"❌ Server '{server_name}' already exists.")
             return
         
+        if port and not self.validator.validate_port(port):
+            await ctx.send("❌ Invalid port number. Port must be between 1024 and 65535.")
+            return
+        
         try:
-            template = self.templates[template_name].copy()
+            template = ServerTemplate.from_dict(template_name, self.templates[template_name])
             
-            # Set up port mapping
-            if port:
-                template['ports'] = {f"25565/tcp": port}
-            
-            # Set up volume for persistent data
-            volume_name = f"minecraft_{server_name}"
-            template['volumes'] = {volume_name: {'bind': '/data', 'mode': 'rw'}}
-            
-            # Create and start container
-            container = self.docker_client.containers.run(
-                template['image'],
-                name=f"minecraft_{server_name}",
-                environment=template['environment'],
-                ports=template['ports'],
-                volumes=template['volumes'],
-                detach=True,
-                restart_policy={"Name": "unless-stopped"}
+            # Create server instance
+            server = MinecraftServer(
+                name=server_name,
+                template=template,
+                port=port,
+                created_by=str(ctx.author)
             )
             
+            # Create container using Docker helper
+            container = await self.docker_helper.create_server(server)
+            
             # Store server info
-            self.active_servers[server_name] = {
-                'container_id': container.id,
-                'template': template_name,
-                'port': port,
-                'created_by': str(ctx.author),
-                'status': 'running'
-            }
+            self.active_servers[server_name] = server.to_dict()
+            self.active_servers[server_name]['container_id'] = container.id
             self.save_active_servers()
             
             embed = discord.Embed(title="✅ Server Created", color=0x00ff00)
@@ -165,12 +140,13 @@ class MinecraftServerManager(commands.Cog):
             await ctx.send(embed=embed)
             
         except Exception as e:
+            logger.error(f"Error creating server {server_name}: {e}")
             await ctx.send(f"❌ Error creating server: {str(e)}")
     
     @commands.command(name='list_servers')
     async def list_servers(self, ctx):
         """List all active servers"""
-        if not self.has_required_role(ctx.author):
+        if not self.permission_checker.has_required_role(ctx.author):
             await ctx.send("❌ You don't have permission to use this command.")
             return
         
@@ -182,21 +158,21 @@ class MinecraftServerManager(commands.Cog):
         
         for server_name, info in self.active_servers.items():
             try:
-                container = self.docker_client.containers.get(info['container_id'])
-                status = container.status
-                
-                # Update status in our records
+                status = await self.docker_helper.get_container_status(info['container_id'])
                 self.active_servers[server_name]['status'] = status
                 
                 embed.add_field(
                     name=server_name,
-                    value=f"Status: {status}\nTemplate: {info['template']}\nPort: {info.get('port', 'Auto')}\nCreated by: {info['created_by']}",
+                    value=f"**Status:** {status}\n"
+                          f"**Template:** {info['template_name']}\n"
+                          f"**Port:** {info.get('port', 'Auto')}\n"
+                          f"**Created by:** {info['created_by']}",
                     inline=False
                 )
-            except docker.errors.NotFound:
+            except Exception as e:
                 embed.add_field(
                     name=server_name,
-                    value="Status: Container not found (may have been removed)",
+                    value=f"**Status:** Error ({str(e)})",
                     inline=False
                 )
         
@@ -206,7 +182,7 @@ class MinecraftServerManager(commands.Cog):
     @commands.command(name='start_server')
     async def start_server(self, ctx, server_name: str):
         """Start a stopped server"""
-        if not self.has_required_role(ctx.author):
+        if not self.permission_checker.has_required_role(ctx.author):
             await ctx.send("❌ You don't have permission to use this command.")
             return
         
@@ -215,20 +191,19 @@ class MinecraftServerManager(commands.Cog):
             return
         
         try:
-            container = self.docker_client.containers.get(self.active_servers[server_name]['container_id'])
-            container.start()
-            
+            await self.docker_helper.start_container(self.active_servers[server_name]['container_id'])
             self.active_servers[server_name]['status'] = 'running'
             self.save_active_servers()
             
             await ctx.send(f"✅ Server '{server_name}' started successfully.")
         except Exception as e:
+            logger.error(f"Error starting server {server_name}: {e}")
             await ctx.send(f"❌ Error starting server: {str(e)}")
     
     @commands.command(name='stop_server')
     async def stop_server(self, ctx, server_name: str):
         """Stop a running server"""
-        if not self.has_required_role(ctx.author):
+        if not self.permission_checker.has_required_role(ctx.author):
             await ctx.send("❌ You don't have permission to use this command.")
             return
         
@@ -237,20 +212,19 @@ class MinecraftServerManager(commands.Cog):
             return
         
         try:
-            container = self.docker_client.containers.get(self.active_servers[server_name]['container_id'])
-            container.stop()
-            
+            await self.docker_helper.stop_container(self.active_servers[server_name]['container_id'])
             self.active_servers[server_name]['status'] = 'stopped'
             self.save_active_servers()
             
             await ctx.send(f"✅ Server '{server_name}' stopped successfully.")
         except Exception as e:
+            logger.error(f"Error stopping server {server_name}: {e}")
             await ctx.send(f"❌ Error stopping server: {str(e)}")
     
     @commands.command(name='restart_server')
     async def restart_server(self, ctx, server_name: str):
         """Restart a server"""
-        if not self.has_required_role(ctx.author):
+        if not self.permission_checker.has_required_role(ctx.author):
             await ctx.send("❌ You don't have permission to use this command.")
             return
         
@@ -259,20 +233,19 @@ class MinecraftServerManager(commands.Cog):
             return
         
         try:
-            container = self.docker_client.containers.get(self.active_servers[server_name]['container_id'])
-            container.restart()
-            
+            await self.docker_helper.restart_container(self.active_servers[server_name]['container_id'])
             self.active_servers[server_name]['status'] = 'running'
             self.save_active_servers()
             
             await ctx.send(f"✅ Server '{server_name}' restarted successfully.")
         except Exception as e:
+            logger.error(f"Error restarting server {server_name}: {e}")
             await ctx.send(f"❌ Error restarting server: {str(e)}")
     
     @commands.command(name='remove_server')
     async def remove_server(self, ctx, server_name: str):
         """Remove a server (stops and deletes container)"""
-        if not self.has_required_role(ctx.author):
+        if not self.permission_checker.has_required_role(ctx.author):
             await ctx.send("❌ You don't have permission to use this command.")
             return
         
@@ -281,21 +254,19 @@ class MinecraftServerManager(commands.Cog):
             return
         
         try:
-            container = self.docker_client.containers.get(self.active_servers[server_name]['container_id'])
-            container.stop()
-            container.remove()
-            
+            await self.docker_helper.remove_container(self.active_servers[server_name]['container_id'])
             del self.active_servers[server_name]
             self.save_active_servers()
             
             await ctx.send(f"✅ Server '{server_name}' removed successfully.")
         except Exception as e:
+            logger.error(f"Error removing server {server_name}: {e}")
             await ctx.send(f"❌ Error removing server: {str(e)}")
     
     @commands.command(name='server_logs')
     async def server_logs(self, ctx, server_name: str, lines: int = 50):
         """Get server logs"""
-        if not self.has_required_role(ctx.author):
+        if not self.permission_checker.has_required_role(ctx.author):
             await ctx.send("❌ You don't have permission to use this command.")
             return
         
@@ -303,27 +274,34 @@ class MinecraftServerManager(commands.Cog):
             await ctx.send(f"❌ Server '{server_name}' not found.")
             return
         
+        if lines > 100:
+            await ctx.send("❌ Maximum 100 lines allowed.")
+            return
+        
         try:
-            container = self.docker_client.containers.get(self.active_servers[server_name]['container_id'])
-            logs = container.logs(tail=lines).decode('utf-8')
+            logs = await self.docker_helper.get_container_logs(
+                self.active_servers[server_name]['container_id'], 
+                lines
+            )
             
             # Split logs into chunks if too long for Discord
-            if len(logs) > 1900:  # Discord message limit is 2000 chars
+            if len(logs) > 1900:
                 chunks = [logs[i:i+1900] for i in range(0, len(logs), 1900)]
                 for i, chunk in enumerate(chunks):
                     await ctx.send(f"```\n{chunk}\n```")
                     if i < len(chunks) - 1:
-                        await asyncio.sleep(1)  # Avoid rate limiting
+                        await asyncio.sleep(1)
             else:
                 await ctx.send(f"```\n{logs}\n```")
                 
         except Exception as e:
+            logger.error(f"Error getting logs for {server_name}: {e}")
             await ctx.send(f"❌ Error getting logs: {str(e)}")
     
     @commands.command(name='server_status')
     async def server_status(self, ctx, server_name: str):
         """Get detailed server status"""
-        if not self.has_required_role(ctx.author):
+        if not self.permission_checker.has_required_role(ctx.author):
             await ctx.send("❌ You don't have permission to use this command.")
             return
         
@@ -332,53 +310,31 @@ class MinecraftServerManager(commands.Cog):
             return
         
         try:
-            container = self.docker_client.containers.get(self.active_servers[server_name]['container_id'])
-            stats = container.stats(stream=False)
+            status_info = await self.docker_helper.get_detailed_status(
+                self.active_servers[server_name]['container_id']
+            )
             
             embed = discord.Embed(title=f"Server Status: {server_name}", color=0x0099ff)
-            embed.add_field(name="Container Status", value=container.status, inline=True)
-            embed.add_field(name="Template", value=self.active_servers[server_name]['template'], inline=True)
+            embed.add_field(name="Container Status", value=status_info['status'], inline=True)
+            embed.add_field(name="Template", value=self.active_servers[server_name]['template_name'], inline=True)
             embed.add_field(name="Port", value=self.active_servers[server_name].get('port', 'Auto'), inline=True)
             embed.add_field(name="Created By", value=self.active_servers[server_name]['created_by'], inline=True)
-            embed.add_field(name="Container ID", value=container.short_id, inline=True)
+            embed.add_field(name="Container ID", value=status_info['short_id'], inline=True)
             
-            # Add resource usage if container is running
-            if container.status == 'running':
-                memory_usage = stats['memory_stats']['usage'] / 1024 / 1024  # MB
-                memory_limit = stats['memory_stats']['limit'] / 1024 / 1024  # MB
-                embed.add_field(name="Memory Usage", value=f"{memory_usage:.1f}MB / {memory_limit:.1f}MB", inline=True)
+            if 'memory_usage' in status_info:
+                embed.add_field(
+                    name="Memory Usage", 
+                    value=f"{status_info['memory_usage']:.1f}MB / {status_info['memory_limit']:.1f}MB", 
+                    inline=True
+                )
             
             await ctx.send(embed=embed)
             
         except Exception as e:
+            logger.error(f"Error getting status for {server_name}: {e}")
             await ctx.send(f"❌ Error getting status: {str(e)}")
 
-class MinecraftBot(commands.Bot):
-    def __init__(self):
-        intents = discord.Intents.default()
-        intents.message_content = True
-        super().__init__(command_prefix='!', intents=intents)
-        
-    async def on_ready(self):
-        logger.info(f'{self.user} has connected to Discord!')
-        await self.add_cog(MinecraftServerManager(self))
-        
-    async def on_command_error(self, ctx, error):
-        if isinstance(error, commands.CommandNotFound):
-            return
-        elif isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(f"❌ Missing required argument: {error.param}")
-        else:
-            await ctx.send(f"❌ An error occurred: {str(error)}")
-            logger.error(f"Command error: {error}")
 
-def main():
-    if not DISCORD_TOKEN:
-        print("Please set the DISCORD_TOKEN environment variable")
-        return
-    
-    bot = MinecraftBot()
-    bot.run(DISCORD_TOKEN)
-
-if __name__ == "__main__":
-    main()
+async def setup(bot):
+    """Setup function for the cog"""
+    await bot.add_cog(MinecraftServerManager(bot))
