@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  minecraft-bot:
+    build: .
+    container_name: minecraft-discord-bot
+    restart: unless-stopped
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - ALLOWED_ROLES=${ALLOWED_ROLES}
+    volumes:
+      # Mount Docker socket to manage containers
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persistent data storage
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # Configuration files
+      - ./config:/app/config:ro
+    networks:
+      - minecraft-network
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "python", "-c", "import discord; print('Bot is running')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: minecraft-bot-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - minecraft-network
+    command: redis-server --appendonly yes
+
+  # Optional: Web dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: minecraft-bot-dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - minecraft-network
+
+volumes:
+  redis_data:
+
+networks:
+  minecraft-network:
+    driver: bridge
