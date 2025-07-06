@@ -151,6 +151,6 @@ class MinecraftServerManager(commands.Cog):
             logger.error(f"Error creating server {server_name}: {e}")
             await ctx.send(f"❌ Error creating server: {str(e)}")
                 
-    async def setup(bot):
-        """Setup function for the cog"""
-        await bot.add_cog(MinecraftServerManager(bot))
+async def setup(bot):
+    """Setup function for the cog"""
+    await bot.add_cog(MinecraftServerManager(bot))
