@@ -18,6 +18,7 @@ class MinecraftServer:
     created_at: str = ""
     status: str = "created"
     container_id: str = ""
+    modpack_url: Optional[str] = None
     
     def __post_init__(self):
         if not self.created_at:
@@ -32,7 +33,8 @@ class MinecraftServer:
             'created_by': self.created_by,
             'created_at': self.created_at,
             'status': self.status,
-            'container_id': self.container_id
+            'container_id': self.container_id,
+            'modpack_url': self.modpack_url
         }
     
     @classmethod
@@ -45,5 +47,6 @@ class MinecraftServer:
             created_by=data.get('created_by', ''),
             created_at=data.get('created_at', ''),
             status=data.get('status', 'created'),
-            container_id=data.get('container_id', '')
+            container_id=data.get('container_id', ''),
+            modpack_url=data.get('modpack_url')
         )
