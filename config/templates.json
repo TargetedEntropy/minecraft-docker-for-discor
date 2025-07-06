@@ -6,11 +6,18 @@
     "environment": {
       "EULA": "TRUE",
       "TYPE": "VANILLA",
+      "VERSION": "LATEST",
       "MEMORY": "2G",
       "DIFFICULTY": "normal",
       "MAX_PLAYERS": "20",
       "MOTD": "A Vanilla Minecraft Server",
-      "SPAWN_PROTECTION": "16"
+      "SPAWN_PROTECTION": "16",
+      "PVP": "true",
+      "ALLOW_NETHER": "true",
+      "ANNOUNCE_PLAYER_ACHIEVEMENTS": "true",
+      "GENERATE_STRUCTURES": "true",
+      "ENABLE_COMMAND_BLOCK": "false",
+      "VIEW_DISTANCE": "10"
     },
     "ports": {
       "25565/tcp": null
@@ -32,7 +39,15 @@
       "MEMORY": "4G",
       "DIFFICULTY": "normal",
       "MAX_PLAYERS": "20",
-      "MOTD": "A Forge Minecraft Server"
+      "MOTD": "A Forge Minecraft Server",
+      "SPAWN_PROTECTION": "16",
+      "PVP": "true",
+      "ALLOW_NETHER": "true",
+      "ANNOUNCE_PLAYER_ACHIEVEMENTS": "true",
+      "GENERATE_STRUCTURES": "true",
+      "ENABLE_COMMAND_BLOCK": "false",
+      "VIEW_DISTANCE": "10",
+      "REMOVE_OLD_MODS": "true"
     },
     "ports": {
       "25565/tcp": null
@@ -42,18 +57,27 @@
       "Name": "unless-stopped"
     }
   },
-  "modded": {
-    "name": "Modded Minecraft",
-    "description": "Minecraft server with custom modpack support",
+  "neoforge": {
+    "name": "NeoForge Minecraft",
+    "description": "Minecraft server with NeoForge mod loader (modern Forge fork)",
     "image": "itzg/minecraft-server:latest",
     "environment": {
       "EULA": "TRUE",
-      "TYPE": "FORGE",
-      "MEMORY": "6G",
+      "TYPE": "NEOFORGE",
+      "VERSION": "1.20.4",
+      "NEOFORGE_VERSION": "20.4.237",
+      "MEMORY": "4G",
       "DIFFICULTY": "normal",
       "MAX_PLAYERS": "20",
-      "MOTD": "A Modded Minecraft Server",
-      "MODPACK": ""
+      "MOTD": "A NeoForge Minecraft Server",
+      "SPAWN_PROTECTION": "16",
+      "PVP": "true",
+      "ALLOW_NETHER": "true",
+      "ANNOUNCE_PLAYER_ACHIEVEMENTS": "true",
+      "GENERATE_STRUCTURES": "true",
+      "ENABLE_COMMAND_BLOCK": "false",
+      "VIEW_DISTANCE": "10",
+      "REMOVE_OLD_MODS": "true"
     },
     "ports": {
       "25565/tcp": null
@@ -70,11 +94,207 @@
     "environment": {
       "EULA": "TRUE",
       "TYPE": "FABRIC",
-      "VERSION": "1.20.1",
+      "VERSION": "1.20.4",
+      "FABRIC_LOADER_VERSION": "LATEST",
       "MEMORY": "3G",
       "DIFFICULTY": "normal",
       "MAX_PLAYERS": "20",
-      "MOTD": "A Fabric Minecraft Server"
+      "MOTD": "A Fabric Minecraft Server",
+      "SPAWN_PROTECTION": "16",
+      "PVP": "true",
+      "ALLOW_NETHER": "true",
+      "ANNOUNCE_PLAYER_ACHIEVEMENTS": "true",
+      "GENERATE_STRUCTURES": "true",
+      "ENABLE_COMMAND_BLOCK": "false",
+      "VIEW_DISTANCE": "10",
+      "REMOVE_OLD_MODS": "true"
+    },
+    "ports": {
+      "25565/tcp": null
+    },
+    "volumes": {},
+    "restart_policy": {
+      "Name": "unless-stopped"
+    }
+  },
+  "modded": {
+    "name": "Modded Minecraft",
+    "description": "Minecraft server with custom modpack support (Forge-based)",
+    "image": "itzg/minecraft-server:latest",
+    "environment": {
+      "EULA": "TRUE",
+      "TYPE": "FORGE",
+      "MEMORY": "6G",
+      "DIFFICULTY": "normal",
+      "MAX_PLAYERS": "20",
+      "MOTD": "A Modded Minecraft Server",
+      "SPAWN_PROTECTION": "16",
+      "PVP": "true",
+      "ALLOW_NETHER": "true",
+      "ANNOUNCE_PLAYER_ACHIEVEMENTS": "true",
+      "GENERATE_STRUCTURES": "true",
+      "ENABLE_COMMAND_BLOCK": "false",
+      "VIEW_DISTANCE": "10",
+      "MODPACK": "",
+      "REMOVE_OLD_MODS": "true",
+      "CF_API_KEY": "",
+      "CF_PAGE_URL": "",
+      "CF_FILENAME_MATCHER": ""
+    },
+    "ports": {
+      "25565/tcp": null
+    },
+    "volumes": {},
+    "restart_policy": {
+      "Name": "unless-stopped"
+    }
+  },
+  "fabric_modded": {
+    "name": "Fabric Modded Minecraft",
+    "description": "Minecraft server with custom Fabric modpack support",
+    "image": "itzg/minecraft-server:latest",
+    "environment": {
+      "EULA": "TRUE",
+      "TYPE": "FABRIC",
+      "VERSION": "1.20.4",
+      "FABRIC_LOADER_VERSION": "LATEST",
+      "MEMORY": "5G",
+      "DIFFICULTY": "normal",
+      "MAX_PLAYERS": "20",
+      "MOTD": "A Fabric Modded Minecraft Server",
+      "SPAWN_PROTECTION": "16",
+      "PVP": "true",
+      "ALLOW_NETHER": "true",
+      "ANNOUNCE_PLAYER_ACHIEVEMENTS": "true",
+      "GENERATE_STRUCTURES": "true",
+      "ENABLE_COMMAND_BLOCK": "false",
+      "VIEW_DISTANCE": "10",
+      "MODPACK": "",
+      "REMOVE_OLD_MODS": "true",
+      "CF_API_KEY": "",
+      "CF_PAGE_URL": "",
+      "CF_FILENAME_MATCHER": ""
+    },
+    "ports": {
+      "25565/tcp": null
+    },
+    "volumes": {},
+    "restart_policy": {
+      "Name": "unless-stopped"
+    }
+  },
+  "neoforge_modded": {
+    "name": "NeoForge Modded Minecraft",
+    "description": "Minecraft server with custom NeoForge modpack support",
+    "image": "itzg/minecraft-server:latest",
+    "environment": {
+      "EULA": "TRUE",
+      "TYPE": "NEOFORGE",
+      "VERSION": "1.20.4",
+      "NEOFORGE_VERSION": "20.4.237",
+      "MEMORY": "6G",
+      "DIFFICULTY": "normal",
+      "MAX_PLAYERS": "20",
+      "MOTD": "A NeoForge Modded Minecraft Server",
+      "SPAWN_PROTECTION": "16",
+      "PVP": "true",
+      "ALLOW_NETHER": "true",
+      "ANNOUNCE_PLAYER_ACHIEVEMENTS": "true",
+      "GENERATE_STRUCTURES": "true",
+      "ENABLE_COMMAND_BLOCK": "false",
+      "VIEW_DISTANCE": "10",
+      "MODPACK": "",
+      "REMOVE_OLD_MODS": "true",
+      "CF_API_KEY": "",
+      "CF_PAGE_URL": "",
+      "CF_FILENAME_MATCHER": ""
+    },
+    "ports": {
+      "25565/tcp": null
+    },
+    "volumes": {},
+    "restart_policy": {
+      "Name": "unless-stopped"
+    }
+  },
+  "quilt": {
+    "name": "Quilt Minecraft",
+    "description": "Minecraft server with Quilt mod loader (Fabric fork)",
+    "image": "itzg/minecraft-server:latest",
+    "environment": {
+      "EULA": "TRUE",
+      "TYPE": "QUILT",
+      "VERSION": "1.20.4",
+      "QUILT_LOADER_VERSION": "LATEST",
+      "MEMORY": "3G",
+      "DIFFICULTY": "normal",
+      "MAX_PLAYERS": "20",
+      "MOTD": "A Quilt Minecraft Server",
+      "SPAWN_PROTECTION": "16",
+      "PVP": "true",
+      "ALLOW_NETHER": "true",
+      "ANNOUNCE_PLAYER_ACHIEVEMENTS": "true",
+      "GENERATE_STRUCTURES": "true",
+      "ENABLE_COMMAND_BLOCK": "false",
+      "VIEW_DISTANCE": "10",
+      "REMOVE_OLD_MODS": "true"
+    },
+    "ports": {
+      "25565/tcp": null
+    },
+    "volumes": {},
+    "restart_policy": {
+      "Name": "unless-stopped"
+    }
+  },
+  "paper": {
+    "name": "Paper Minecraft",
+    "description": "High-performance Minecraft server with Paper (Spigot fork)",
+    "image": "itzg/minecraft-server:latest",
+    "environment": {
+      "EULA": "TRUE",
+      "TYPE": "PAPER",
+      "VERSION": "1.20.4",
+      "MEMORY": "3G",
+      "DIFFICULTY": "normal",
+      "MAX_PLAYERS": "30",
+      "MOTD": "A Paper Minecraft Server",
+      "SPAWN_PROTECTION": "16",
+      "PVP": "true",
+      "ALLOW_NETHER": "true",
+      "ANNOUNCE_PLAYER_ACHIEVEMENTS": "true",
+      "GENERATE_STRUCTURES": "true",
+      "ENABLE_COMMAND_BLOCK": "false",
+      "VIEW_DISTANCE": "10",
+      "PAPER_CHANNEL": "default"
+    },
+    "ports": {
+      "25565/tcp": null
+    },
+    "volumes": {},
+    "restart_policy": {
+      "Name": "unless-stopped"
+    }
+  },
+  "purpur": {
+    "name": "Purpur Minecraft",
+    "description": "Feature-rich Minecraft server with Purpur (Paper fork)",
+    "image": "itzg/minecraft-server:latest",
+    "environment": {
+      "EULA": "TRUE",
+      "TYPE": "PURPUR",
+      "VERSION": "1.20.4",
+      "MEMORY": "3G",
+      "DIFFICULTY": "normal",
+      "MAX_PLAYERS": "30",
+      "MOTD": "A Purpur Minecraft Server",
+      "SPAWN_PROTECTION": "16",
+      "PVP": "true",
+      "ALLOW_NETHER": "true",
+      "ANNOUNCE_PLAYER_ACHIEVEMENTS": "true",
+      "GENERATE_STRUCTURES": "true",
+      "ENABLE_COMMAND_BLOCK": "false",
+      "VIEW_DISTANCE": "10"
     },
     "ports": {
       "25565/tcp": null

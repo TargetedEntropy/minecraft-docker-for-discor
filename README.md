@@ -98,8 +98,7 @@ DEFAULT_MEMORY=2G
 
 Built-in templates include:
 - **Vanilla**: Standard Minecraft server
-- **Forge**: Modded server with Forge
-- **Modded**: Custom modpack support
+- **Modded**: Modded server with Forge, NeoForge or Fabric
 
 Templates are fully customizable in `config/templates.json`.
 
