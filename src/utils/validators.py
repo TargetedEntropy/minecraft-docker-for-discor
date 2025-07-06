@@ -28,13 +28,13 @@ class ServerValidator:
     @staticmethod
     def validate_memory(memory: str) -> bool:
         """Validate memory format (e.g., '2G', '512M')"""
-        pattern = r'^\d+[GMgm]
+        pattern = r'^\d+[GMgm]'
         
         return bool(re.match(pattern, memory))
     
     @staticmethod
     def validate_minecraft_version(version: str) -> bool:
         """Validate Minecraft version format"""
-        pattern = r'^\d+\.\d+(\.\d+)?
+        pattern = r'^\d+\.\d+(\.\d+)?'
         
         return bool(re.match(pattern, version))
