@@ -24,7 +24,7 @@ class DockerHelper:
             logger.error(f"Failed to connect to Docker: {e}")
             raise
     
-    async def create_server(self, server):
+async def create_server(self, server):
         """Create and start a new Minecraft server container"""
         try:
             # Set up port mapping
@@ -38,11 +38,30 @@ class DockerHelper:
             volume_name = f"minecraft_{server.name}"
             volumes = {volume_name: {'bind': '/data', 'mode': 'rw'}}
             
+            # Prepare environment variables
+            environment = server.template.environment.copy()
+            
+            # Add modpack URL if provided
+            if server.modpack_url:
+                environment['MODPACK'] = server.modpack_url
+                # Ensure the server type supports modpacks
+                if environment.get('TYPE') in ['VANILLA']:
+                    # Convert vanilla to forge for modpack support
+                    environment['TYPE'] = 'FORGE'
+                    environment['VERSION'] = environment.get('VERSION', '1.20.4')
+                    if 'FORGE_VERSION' not in environment:
+                        environment['FORGE_VERSION'] = 'RECOMMENDED'
+                
+                # Enable mod removal for modpack updates
+                environment['REMOVE_OLD_MODS'] = 'true'
+                environment['REMOVE_OLD_MODS_INCLUDE'] = '*.jar'
+                environment['REMOVE_OLD_MODS_EXCLUDE'] = 'essential'
+            
             # Create container
             container = self.client.containers.run(
                 server.template.image,
                 name=f"minecraft_{server.name}",
-                environment=server.template.environment,
+                environment=environment,
                 ports=ports,
                 volumes=volumes,
                 detach=True,
@@ -50,99 +69,6 @@ class DockerHelper:
             )
             
             logger.info(f"Created container for server {server.name}: {container.short_id}")
+            if server.modpack_url:
+                logger.info(f"Server {server.name} configured with modpack: {server.modpack_url}")
             return container
-            
-        except Exception as e:
-            logger.error(f"Error creating server container: {e}")
-            raise
-    
-    async def start_container(self, container_id: str):
-        """Start a stopped container"""
-        try:
-            container = self.client.containers.get(container_id)
-            container.start()
-            logger.info(f"Started container {container.short_id}")
-        except Exception as e:
-            logger.error(f"Error starting container {container_id}: {e}")
-            raise
-    
-    async def stop_container(self, container_id: str):
-        """Stop a running container"""
-        try:
-            container = self.client.containers.get(container_id)
-            container.stop()
-            logger.info(f"Stopped container {container.short_id}")
-        except Exception as e:
-            logger.error(f"Error stopping container {container_id}: {e}")
-            raise
-    
-    async def restart_container(self, container_id: str):
-        """Restart a container"""
-        try:
-            container = self.client.containers.get(container_id)
-            container.restart()
-            logger.info(f"Restarted container {container.short_id}")
-        except Exception as e:
-            logger.error(f"Error restarting container {container_id}: {e}")
-            raise
-    
-    async def remove_container(self, container_id: str):
-        """Stop and remove a container"""
-        try:
-            container = self.client.containers.get(container_id)
-            container.stop()
-            container.remove()
-            logger.info(f"Removed container {container.short_id}")
-        except Exception as e:
-            logger.error(f"Error removing container {container_id}: {e}")
-            raise
-    
-    async def get_container_status(self, container_id: str) -> str:
-        """Get the status of a container"""
-        try:
-            container = self.client.containers.get(container_id)
-            return container.status
-        except docker.errors.NotFound:
-            return "not_found"
-        except Exception as e:
-            logger.error(f"Error getting container status {container_id}: {e}")
-            return "error"
-    
-    async def get_container_logs(self, container_id: str, lines: int = 50) -> str:
-        """Get logs from a container"""
-        try:
-            container = self.client.containers.get(container_id)
-            logs = container.logs(tail=lines).decode('utf-8')
-            return logs
-        except Exception as e:
-            logger.error(f"Error getting container logs {container_id}: {e}")
-            raise
-    
-    async def get_detailed_status(self, container_id: str) -> Dict:
-        """Get detailed status information for a container"""
-        try:
-            container = self.client.containers.get(container_id)
-            
-            result = {
-                'status': container.status,
-                'short_id': container.short_id
-            }
-            
-            # Get resource usage if container is running
-            if container.status == 'running':
-                try:
-                    stats = container.stats(stream=False)
-                    memory_usage = stats['memory_stats']['usage'] / 1024 / 1024  # MB
-                    memory_limit = stats['memory_stats']['limit'] / 1024 / 1024  # MB
-                    result.update({
-                        'memory_usage': memory_usage,
-                        'memory_limit': memory_limit
-                    })
-                except Exception as e:
-                    logger.warning(f"Could not get stats for container {container_id}: {e}")
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error getting detailed status for {container_id}: {e}")
-            raise
