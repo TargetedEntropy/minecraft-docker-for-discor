@@ -89,7 +89,7 @@ class MinecraftServerManager(commands.Cog):
         
         await ctx.send(embed=embed)
     
-@commands.command(name='create_server')
+    @commands.command(name='create_server')
     async def create_server(self, ctx, server_name: str, template_name: str, port: int = None, modpack_url: str = None):
         """Create a new Minecraft server from template with optional modpack URL"""
         if not self.permission_checker.has_required_role(ctx.author):
@@ -150,6 +150,7 @@ class MinecraftServerManager(commands.Cog):
         except Exception as e:
             logger.error(f"Error creating server {server_name}: {e}")
             await ctx.send(f"❌ Error creating server: {str(e)}")
-async def setup(bot):
-    """Setup function for the cog"""
-    await bot.add_cog(MinecraftServerManager(bot))
+                
+    async def setup(bot):
+        """Setup function for the cog"""
+        await bot.add_cog(MinecraftServerManager(bot))
