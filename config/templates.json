@@ -117,38 +117,6 @@
       "Name": "unless-stopped"
     }
   },
-  "modded": {
-    "name": "Modded Minecraft",
-    "description": "Minecraft server with custom modpack support (Forge-based)",
-    "image": "itzg/minecraft-server:latest",
-    "environment": {
-      "EULA": "TRUE",
-      "TYPE": "FORGE",
-      "MEMORY": "6G",
-      "DIFFICULTY": "normal",
-      "MAX_PLAYERS": "20",
-      "MOTD": "A Modded Minecraft Server",
-      "SPAWN_PROTECTION": "16",
-      "PVP": "true",
-      "ALLOW_NETHER": "true",
-      "ANNOUNCE_PLAYER_ACHIEVEMENTS": "true",
-      "GENERATE_STRUCTURES": "true",
-      "ENABLE_COMMAND_BLOCK": "false",
-      "VIEW_DISTANCE": "10",
-      "MODPACK": "",
-      "REMOVE_OLD_MODS": "true",
-      "CF_API_KEY": "",
-      "CF_PAGE_URL": "",
-      "CF_FILENAME_MATCHER": ""
-    },
-    "ports": {
-      "25565/tcp": null
-    },
-    "volumes": {},
-    "restart_policy": {
-      "Name": "unless-stopped"
-    }
-  },
   "quilt": {
     "name": "Quilt Minecraft",
     "description": "Minecraft server with Quilt mod loader (Fabric fork)",
