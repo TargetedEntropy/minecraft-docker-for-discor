@@ -16,7 +16,7 @@ class ServerValidator:
             return False
         
         # Allow letters, numbers, underscores, and hyphens
-        pattern = r'^[a-zA-Z0-9_-]+
+        pattern = r'^[a-zA-Z0-9_-]+'
         
         return bool(re.match(pattern, name))
     
