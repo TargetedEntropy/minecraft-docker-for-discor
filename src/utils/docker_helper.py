@@ -72,3 +72,5 @@ async def create_server(self, server):
             if server.modpack_url:
                 logger.info(f"Server {server.name} configured with modpack: {server.modpack_url}")
             return container
+        except Exception as error:
+            pass
