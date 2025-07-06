@@ -18,7 +18,7 @@ class AdminCommands(commands.Cog):
         self.permission_checker = PermissionChecker()
     
     @commands.command(name='info')
-    async def bot_info(self, ctx):
+    async def info(self, ctx):
         """Get bot information and statistics"""
         if not self.permission_checker.has_required_role(ctx.author):
             await ctx.send("❌ You don't have permission to use this command.")
